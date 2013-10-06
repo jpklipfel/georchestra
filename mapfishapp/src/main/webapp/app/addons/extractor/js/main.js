@@ -6,7 +6,6 @@ GEOR.Addons.Extractor = function(map, options) {
 };
 
 GEOR.Addons.Extractor.prototype = {
-    item: null,
     win: null,
     jsonFormat: null,
 
@@ -19,6 +18,8 @@ GEOR.Addons.Extractor.prototype = {
     init: function(record) {
         var lang = OpenLayers.Lang.getCode();
         this.jsonFormat = new OpenLayers.Format.JSON();
+        /*
+        not used for now
         this.layer = new OpenLayers.Layer.Vector("addon_extractor_vectors", {
             displayInLayerSwitcher: false,
             styleMap: new OpenLayers.StyleMap({
@@ -31,6 +32,7 @@ GEOR.Addons.Extractor.prototype = {
                 }
             })
         });
+        */
         // return menu item:
         this.item = new Ext.menu.Item({
             text: record.get("title")[lang] || record.get("title")["en"],
@@ -141,13 +143,13 @@ GEOR.Addons.Extractor.prototype = {
                 }],
                 listeners: {
                     "hide": function() {
-                        this.map.removeLayer(this.layer);
+                        //this.map.removeLayer(this.layer);
                     },
                     scope: this
                 }
             });
         }
-        this.map.addLayer(this.layer);
+        //this.map.addLayer(this.layer);
         this.win.show();
     },
 
@@ -249,7 +251,7 @@ GEOR.Addons.Extractor.prototype = {
 
     destroy: function() {
         this.win.hide();
-        this.layer = null;
+        //this.layer = null;
         this.map = null;
     }
 };

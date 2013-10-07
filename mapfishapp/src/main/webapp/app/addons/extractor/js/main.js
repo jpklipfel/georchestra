@@ -171,7 +171,7 @@ GEOR.Addons.Extractor.prototype = {
         };
         GEOR.waiter.show();
         Ext.Ajax.request({
-            url: "/extractor/initiate", // TODO: param
+            url: "/extractorapp/initiate", // TODO: param
             success: function(response) {
                 if (response.responseText &&
                     response.responseText.indexOf('<success>true</success>') > 0) {

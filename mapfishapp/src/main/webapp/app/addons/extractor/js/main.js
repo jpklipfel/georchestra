@@ -5,10 +5,23 @@ GEOR.Addons.Extractor = function(map, options) {
     this.options = options;
 };
 
+/*
+ * TODO: 
+ * - handle dlform
+ * - wizard (1 choose layers (NOK report here) 2 choose extent 3 choose formats 4 enter email )
+ * - modifyFeature control improved: non symetrical mode when OpenLayers.Control.ModifyFeature.RESIZE
+ */
 GEOR.Addons.Extractor.prototype = {
     win: null,
     jsonFormat: null,
-
+    layer: null,
+    modifyControl: null,
+    item: null,
+    srsField: null,
+    vectorFormatField: null,
+    rasterFormatField: null,
+    resField: null,
+    emailField: null,
     /**
      * Method: init
      *
@@ -18,22 +31,33 @@ GEOR.Addons.Extractor.prototype = {
     init: function(record) {
         var lang = OpenLayers.Lang.getCode();
         this.jsonFormat = new OpenLayers.Format.JSON();
-        /*
-        not used for now
+        var style = {
+            externalGraphic: "app/img/famfamfam/shading.png",
+            graphicWidth: 16,
+            graphicHeight: 16,
+            graphicOpacity: 1,
+            graphicXOffset: -8,
+            graphicYOffset: -8,
+            graphicZIndex: 10000,
+            strokeColor: "fuchsia",
+            strokeWidth: 2,
+            fillOpacity: 0,
+            cursor: "pointer"
+        };
         this.layer = new OpenLayers.Layer.Vector("addon_extractor_vectors", {
             displayInLayerSwitcher: false,
             styleMap: new OpenLayers.StyleMap({
-                "default": {
-                    graphicName: "cross",
-                    pointRadius: 16,
-                    strokeColor: "fuchsia",
-                    strokeWidth: 2,
-                    fillOpacity: 0
-                }
+                "default": Ext.applyIf({}, style),
+                "select": Ext.applyIf({}, style)
             })
         });
-        */
-        // return menu item:
+        this.modifyControl = new OpenLayers.Control.ModifyFeature(this.layer, {
+            standalone: true,
+            mode: OpenLayers.Control.ModifyFeature.RESHAPE | 
+                OpenLayers.Control.ModifyFeature.RESIZE | 
+                OpenLayers.Control.ModifyFeature.DRAG,
+            autoActivate: true
+        });
         this.item = new Ext.menu.Item({
             text: record.get("title")[lang] || record.get("title")["en"],
             qtip: record.get("description")[lang] || record.get("description")["en"],
@@ -43,117 +67,131 @@ GEOR.Addons.Extractor.prototype = {
         });
         return this.item;
     },
+    
+    createWindow: function() {
+        var FIELD_WIDTH = 170,
+            base = {
+                forceSelection: true,
+                editable: false,
+                triggerAction: 'all',
+                mode: 'local',
+                width: FIELD_WIDTH,
+                labelSeparator: OpenLayers.i18n("labelSeparator"),
+                valueField: 'value',
+                displayField: 'text'
+        };
+        this.srsField = new Ext.form.ComboBox(Ext.apply({
+            name: "srs",
+            fieldLabel: OpenLayers.i18n("SRS"),
+            value: this.options.defaultSRS,
+            store: new Ext.data.SimpleStore({
+                fields: ['value', 'text'],
+                data: this.options.srsData
+            })
+        }, base));
+        this.vectorFormatField = new Ext.form.ComboBox(Ext.apply({
+            name: "vectorFormat",
+            fieldLabel: OpenLayers.i18n("Format for vectors"),
+            value: this.options.defaultVectorFormat,
+            store: new Ext.data.SimpleStore({
+                fields: ['value', 'text'],
+                data: this.options.vectorFormatData
+            })
+        }, base));
+        this.rasterFormatField = new Ext.form.ComboBox(Ext.apply({
+            name: "rasterFormat",
+            fieldLabel: OpenLayers.i18n("Format for rasters"),
+            value: this.options.defaultRasterFormat,
+            store: new Ext.data.SimpleStore({
+                fields: ['value', 'text'],
+                data: this.options.rasterFormatData
+            })
+        }, base));
+        this.resField = new Ext.form.NumberField({
+            fieldLabel: OpenLayers.i18n("Resolution for rasters (cm)"),
+            name: "resolution",
+            width: FIELD_WIDTH,
+            labelSeparator: OpenLayers.i18n("labelSeparator"),
+            value: this.options.defaultRasterResolution,
+            decimalPrecision: 0
+        });
+        this.emailField = new Ext.form.TextField({
+            name: "email",
+            vtype: "email",
+            vtypeText: OpenLayers.i18n('This field should be an e-mail address in the format user@domain.com'),
+            allowBlank: false,
+            width: FIELD_WIDTH,
+            labelSeparator: OpenLayers.i18n("labelSeparator"),
+            value: GEOR.config.USEREMAIL || "",
+            fieldLabel: OpenLayers.i18n("Email")
+        });
+        return new Ext.Window({
+            closable: true,
+            closeAction: 'hide',
+            width: 330,
+            height: 270,
+            title: OpenLayers.i18n("addon_extractor_popup_title"),
+            border: false,
+            buttonAlign: 'left',
+            layout: 'fit',
+            items: [{
+                xtype: 'form',
+                labelWidth: 120,
+                bodyStyle: "padding:5px;",
+                items: [
+                    this.srsField, 
+                    this.vectorFormatField, 
+                    this.rasterFormatField, 
+                    this.resField, 
+                    this.emailField
+                ]
+            }],
+            fbar: ['->', {
+                text: OpenLayers.i18n("Close"),
+                handler: function() {
+                    this.win.hide();
+                },
+                scope: this
+            }, {
+                text: OpenLayers.i18n("Extract"),
+                handler: this.extract,
+                scope: this
+            }],
+            listeners: {
+                "show": function() {
+                    if (!this.layer.features.length) {
+                        this.layer.addFeatures([
+                            new OpenLayers.Feature.Vector(
+                                this.map.getExtent().scale(0.83).toGeometry()
+                            )
+                        ]);
+                    }
+                    this.map.addLayer(this.layer);
+                    this.map.zoomToExtent(
+                        this.layer.features[0].geometry.getBounds().scale(1.2)
+                    );
+                    this.map.addControl(this.modifyControl);
+                    this.modifyControl.selectFeature(this.layer.features[0]);
+                },
+                "hide": function() {
+                    this.map.removeLayer(this.layer);
+                    this.modifyControl.unselectFeature(this.layer.features[0]);
+                    this.map.removeControl(this.modifyControl);
+                },
+                scope: this
+            }
+        });
+    },
 
     showWindow: function() {
         if (!this.win) {
-            // TODO: factorize
-            this.srsField = new Ext.form.ComboBox({
-                name: "srs",
-                forceSelection: true,
-                editable: false,
-                triggerAction: 'all',
-                fieldLabel: 'SRS',
-                mode: 'local',
-                valueField: 'value',
-                displayField: 'text',
-                value: "EPSG:4326",
-                store: new Ext.data.SimpleStore({
-                    fields: ['value', 'text'],
-                    data: [
-                        ["EPSG:4326", "WGS84 (EPSG:4326)"],
-                        ["EPSG:2154", "Lambert 93 (EPSG:2154)"]
-                    ]
-                })
-            });
-            this.vectorFormatField = new Ext.form.ComboBox({
-                name: "vectorFormat",
-                forceSelection: true,
-                editable: false,
-                triggerAction: 'all',
-                fieldLabel: 'Format for vectors',
-                mode: 'local',
-                valueField: 'value',
-                displayField: 'text',
-                value: "shp",
-                store: new Ext.data.SimpleStore({
-                    fields: ['value', 'text'],
-                    data: [
-                        ["shp", "Shapefile"],
-                        ["mif", "Mif/Mid"],
-                        ["tab", "TAB"],
-                        ["kml", "KML"]
-                    ]
-                })
-            });
-            this.rasterFormatField = new Ext.form.ComboBox({
-                name: "rasterFormat",
-                forceSelection: true,
-                editable: false,
-                triggerAction: 'all',
-                fieldLabel: 'Format for rasters',
-                mode: 'local',
-                valueField: 'value',
-                displayField: 'text',
-                value: "geotiff",
-                store: new Ext.data.SimpleStore({
-                    fields: ['value', 'text'],
-                    data: [
-                        ["geotiff", "GeoTiff"],
-                        ["tiff", "Tif + TFW"]
-                    ]
-                })
-            });
-            this.resField = new Ext.form.NumberField({
-                name: "resolution",
-                value: 50,
-                fieldLabel: 'Resolution for rasters (cm)',
-                decimalPrecision: 2
-            });
-            this.emailField = new Ext.form.TextField({
-                name: "email",
-                allowBlank: false,
-                value: GEOR.config.USEREMAIL,
-                fieldLabel: 'Email'
-            });
-            // TODO: wizard style (1 choose extent 2 choose formats 3 enter email )
-            this.win = new Ext.Window({
-                closable: true,
-                closeAction: 'hide',
-                width: 330,
-                height: 250,
-                title: OpenLayers.i18n("addon_extractor_popup_title"),
-                border: false,
-                buttonAlign: 'left',
-                layout: 'fit',
-                items: [{
-                    xtype: 'form',
-                    bodyStyle: "padding:5px;",
-                    items: [this.srsField, this.vectorFormatField, this.rasterFormatField, this.resField, this.emailField]
-                }],
-                fbar: ['->', {
-                    text: OpenLayers.i18n("Close"),
-                    handler: function() {
-                        this.win.hide();
-                    },
-                    scope: this
-                }, {
-                    text: OpenLayers.i18n("Extract"),
-                    handler: this.extract,
-                    scope: this
-                }],
-                listeners: {
-                    "hide": function() {
-                        //this.map.removeLayer(this.layer);
-                    },
-                    scope: this
-                }
-            });
+            this.win = this.createWindow();
         }
-        //this.map.addLayer(this.layer);
         this.win.show();
     },
 
     doExtract: function(okLayers) {
+        var bbox = this.layer.features[0].geometry.getBounds();
         var spec = {
             "emails": [this.emailField.getValue()],
             "globalProperties": {
@@ -163,15 +201,14 @@ GEOR.Addons.Extractor.prototype = {
                 "vectorFormat": this.vectorFormatField.getValue(),
                 "bbox": {
                     "srs": this.map.getProjection(),
-                    // TODO: display BBOX in vectorLayer + modifyFeature Control
-                    "value": this.map.getExtent().toArray()
+                    "value": bbox.toArray()
                 }
             },
             "layers": okLayers
         };
         GEOR.waiter.show();
         Ext.Ajax.request({
-            url: "/extractorapp/initiate", // TODO: param
+            url: this.options.serviceURL,
             success: function(response) {
                 if (response.responseText &&
                     response.responseText.indexOf('<success>true</success>') > 0) {
@@ -180,14 +217,12 @@ GEOR.Addons.Extractor.prototype = {
                         msg: OpenLayers.i18n('The extraction request succeeded, check your email.')
                     });
                 } else {
-                    this.win.hide();
                     GEOR.util.errorDialog({
                         msg: OpenLayers.i18n('The extraction request failed.')
                     });
                 }
             },
             failure: function(response) {
-                this.win.hide();
                 GEOR.util.errorDialog({
                     msg: OpenLayers.i18n('The extraction request failed.')
                 });
@@ -198,9 +233,7 @@ GEOR.Addons.Extractor.prototype = {
     },
 
     extract: function() {
-        var email = this.emailField.getValue();
-        if (!email) {
-            // todo: msg
+        if (!this.emailField.isValid()) {
             return;
         }
         var okLayers = [], nokLayers = [], count = this.map.layers.length;
@@ -251,7 +284,9 @@ GEOR.Addons.Extractor.prototype = {
 
     destroy: function() {
         this.win.hide();
-        //this.layer = null;
+        this.layer = null;
         this.map = null;
+        this.jsonFormat = null;
+        this.modifyControl = null;
     }
 };

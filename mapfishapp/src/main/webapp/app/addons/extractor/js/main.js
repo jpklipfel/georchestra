@@ -8,6 +8,7 @@ GEOR.Addons.Extractor = function(map, options) {
 /*
  * TODO: 
  * - handle dlform
+ * - handle ACLs
  * - wizard (1 choose layers (NOK report here) 2 choose extent 3 choose formats 4 enter email )
  * - modifyFeature control improved: non symetrical mode when OpenLayers.Control.ModifyFeature.RESIZE
  */
@@ -32,7 +33,7 @@ GEOR.Addons.Extractor.prototype = {
         var lang = OpenLayers.Lang.getCode();
         this.jsonFormat = new OpenLayers.Format.JSON();
         var style = {
-            externalGraphic: "app/img/famfamfam/shading.png",
+            externalGraphic: "app/addons/extractor/img/shading.png",
             graphicWidth: 16,
             graphicHeight: 16,
             graphicOpacity: 1,

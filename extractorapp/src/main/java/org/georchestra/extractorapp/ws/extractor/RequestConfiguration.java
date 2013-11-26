@@ -28,6 +28,7 @@ public class RequestConfiguration {
     public final long maxCoverageExtractionSize;
     public final boolean remoteReproject;
     public final boolean useCommandLineGDAL;
+    public final boolean allowMissingMetadata;
     /** the original request in json syntax */
 	public final String strRequest;
     
@@ -37,7 +38,7 @@ public class RequestConfiguration {
             String roles, UsernamePasswordCredentials adminCredentials,
             String secureHost, String extractionFolderPrefix, long maxCoverageExtractionSize, 
             boolean remoteReproject, boolean useCommandLineGDAL,
-            String strRequest) {
+            boolean allowMissingMetadata, String strRequest) {
         super();
         
         this.strRequest = strRequest;
@@ -53,6 +54,7 @@ public class RequestConfiguration {
         this.maxCoverageExtractionSize = maxCoverageExtractionSize;
         this.remoteReproject = remoteReproject;
         this.useCommandLineGDAL = useCommandLineGDAL;
+        this.allowMissingMetadata = allowMissingMetadata;
         this.extractionFolderPrefix = extractionFolderPrefix;
     }
     public void setThreadLocal() {

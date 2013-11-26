@@ -278,7 +278,7 @@ public class ExtractorController implements ServletContextAware {
 				RequestConfiguration requestConfig = new RequestConfiguration(
 						requests, requestUuid, email, 
 		                servletContext, testing, username, roles, adminCredentials, secureHost, extractionFolderPrefix, 
-		                maxCoverageExtractionSize, remoteReproject, useCommandLineGDAL, postData);
+		                maxCoverageExtractionSize, remoteReproject, useCommandLineGDAL, allowMissingMetadata, postData);
 				ExtractionTask extractor = new ExtractionTask(requestConfig);
 				
 				LOG.info("Sending mail to user");

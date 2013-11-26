@@ -3,6 +3,7 @@ maxExtractions=5
 remoteReproject=true
 useCommandLineGDAL=false
 extractionFolderPrefix=extraction-
+allowMissingMetadata=true
 
 host=@shared.server.name@
 instance=@shared.instance.name@

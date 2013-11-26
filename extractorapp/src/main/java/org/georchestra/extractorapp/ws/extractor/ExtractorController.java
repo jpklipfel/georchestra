@@ -61,6 +61,7 @@ public class ExtractorController implements ServletContextAware {
     private ServletContext              servletContext;
     private String                      servletUrl;
     private String                      extractionFolderPrefix;
+    private boolean                     allowMissingMetadata;
     private boolean                     remoteReproject = true;
     private boolean                     useCommandLineGDAL = false;
 
@@ -400,6 +401,13 @@ public class ExtractorController implements ServletContextAware {
 	    }
     }
 	
+    public boolean getAllowMissingMetadata() {
+        return allowMissingMetadata;
+    }
+    public void setAllowMissingMetadata(boolean allowMissingMetadata) {
+        this.allowMissingMetadata = allowMissingMetadata;
+    }
+
     // ----------------- Methods for accessing servlet context ----------------- //
     // ServletContext is required for determining where files are within the 
     // webapp
